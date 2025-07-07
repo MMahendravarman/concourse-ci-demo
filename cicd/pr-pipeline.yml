@@ -8,7 +8,7 @@ resources:
 - name: pull-request
   type: github-pr
   source:
-    repository: https://github.com/MMahendravarman/concourse-ci-demo
+    repository: MMahendravarman/concourse-ci-demo
     access_token: ((github-token))
     disable_ci_skip: true
 
