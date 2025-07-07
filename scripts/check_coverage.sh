@@ -60,7 +60,8 @@ echo "name : $REPO_NAME"
 curl -s -X POST "$API_URL" \
   -H "Authorization: token ${GITHUB_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"body\": \"$COMMENT\"}"
+  -H "Accept: application/vnd.github+json" \
+  -d "$(jq -nc --arg body "$COMMENT" '{body: $body}')"
 
 # === Fail build if below threshold ===
 if [ "$PERCENT" -lt "$THRESHOLD" ]; then
