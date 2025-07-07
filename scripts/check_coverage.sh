@@ -51,6 +51,12 @@ COMMENT="🧪 **Code coverage:** $PERCENT% (Threshold: $THRESHOLD%)
 API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/comments"
 
 echo "💬 Posting comment to PR..."
+echo "url : $REPO_URL"
+echo "path : $REPO_PATH"
+echo "owner : $REPO_OWNER"
+echo "name : $REPO_NAME"
+
+
 curl -s -X POST "$API_URL" \
   -H "Authorization: token ${GITHUB_TOKEN}" \
   -H "Content-Type: application/json" \
