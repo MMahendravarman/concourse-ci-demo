@@ -5,7 +5,7 @@ set -e
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
 
 echo "🔍 Reading PR metadata..."
-PR_NUMBER=$(cat metadata/pr)
+PR_NUMBER=$(cat .git/resource/pr)
 PR_TITLE=$(jq -r .title .git/resource/metadata.json)
 PR_AUTHOR=$(jq -r .author .git/resource/metadata.json)
 BASE_SHA=$(cat .git/resource/base_sha)
