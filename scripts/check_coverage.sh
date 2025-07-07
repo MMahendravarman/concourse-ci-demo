@@ -1,18 +1,19 @@
 #!/bin/bash
 set -e
 
-# Install jq if not present
-if ! command -v jq &> /dev/null; then
-  apt-get update && apt-get install -y jq
-fi
-
 # === CONFIGURATION ===
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
 
+# Install jq if not present
+if ! command -v jq &> /dev/null; then
+  echo "Installing jq..."
+  apt-get update && apt-get install -y jq
+fi
+
 echo "🔍 Reading PR metadata..."
 PR_NUMBER=$(cat .git/resource/pr)
-PR_TITLE=$(jq -r .title .git/resource/metadata.json)
-PR_AUTHOR=$(jq -r .author .git/resource/metadata.json)
+PR_TITLE=$(jq -r '.[] | select(.name=="title") | .value' .git/resource/metadata.json)
+PR_AUTHOR=$(jq -r '.[] | select(.name=="author") | .value' .git/resource/metadata.json)
 BASE_SHA=$(cat .git/resource/base_sha)
 HEAD_SHA=$(cat .git/resource/head_sha)
 
