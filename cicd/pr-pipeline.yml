@@ -1,6 +1,6 @@
 resource_types:
 - name: github-pr
-  type: docker-image
+  type: registry-image
   source:
     repository: teliaoss/github-pr-resource
 
@@ -18,13 +18,17 @@ jobs:
     - get: pull-request
       trigger: true
       version: every
+      
 
     - task: build-and-check-coverage
+      input_mapping: { pull-request: pull-request }
       config:
         platform: linux
         image_resource:
           type: registry-image
-          source: {repository: maven, tag: '3.8.7-openjdk-17'}
+          source:
+            repository: maven
+            tag: '3.8.3-openjdk-17'
         inputs:
           - name: pull-request
         params:
