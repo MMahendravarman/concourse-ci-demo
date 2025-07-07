@@ -38,8 +38,8 @@ PERCENT=$((COVERED * 100 / TOTAL))
 echo "✅ Code coverage = $PERCENT% (threshold = $THRESHOLD%)"
 
 # === Dynamically extract repo owner and name ===
-REPO_URL=$(git remote get-url origin)  # e.g., https://github.com/owner/repo.git
-REPO_PATH=$(echo "$REPO_URL" | sed -E 's|.*github\.com[:/](.+)\.git|\1|')  # owner/repo
+REPO_URL=$(git remote get-url origin)
+REPO_PATH=$(echo "$REPO_URL" | sed -E 's#.*github\.com[:/]+([^/]+)/([^/.]+)(\.git)?$#\1/\2#')
 REPO_OWNER=$(echo "$REPO_PATH" | cut -d'/' -f1)
 REPO_NAME=$(echo "$REPO_PATH" | cut -d'/' -f2)
 
