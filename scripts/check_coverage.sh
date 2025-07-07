@@ -4,11 +4,12 @@ set -e
 # === CONFIGURATION ===
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
 
-# Install jq if not present
-if ! command -v jq &> /dev/null; then
-  echo "Installing jq..."
-  apt-get update && apt-get install -y jq
-fi
+for util in jq bc curl git; do
+  if ! command -v $util &> /dev/null; then
+    echo "Installing $util..."
+    apt-get update && apt-get install -y $util
+  fi
+done
 
 echo "🔍 Reading PR metadata..."
 PR_NUMBER=$(cat .git/resource/pr)
