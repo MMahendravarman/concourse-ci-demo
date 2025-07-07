@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Install jq if not present
+if ! command -v jq &> /dev/null; then
+  apt-get update && apt-get install -y jq
+fi
+
 # === CONFIGURATION ===
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
 
