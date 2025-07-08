@@ -9,8 +9,7 @@ resources:
   type: pr
   source:
     repository: MMahendravarman/concourse-ci-demo
-    access_token: ((github-token))
-    context: ci/concourse-pr-check   # GitHub status context name
+    access_token: ((github-token))    
     disable_ci_skip: true
 
 jobs:
