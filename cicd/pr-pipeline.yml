@@ -7,7 +7,7 @@ resource_types:
 - name: pr-status
   type: registry-image
   source:
-    repository: pix4d/cogito/status
+    repository: pix4d/cogito
 
 resources:
 - name: pull-request
