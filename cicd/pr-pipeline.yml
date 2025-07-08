@@ -1,15 +1,28 @@
 resource_types:
-- name: pr
+- name: github-pr
+  type: docker-image
+  source:
+    repository: teliaoss/github-pr-resource
+
+- name: pr-status
   type: registry-image
   source:
-    repository: pix4d/cogito/pr
+    repository: pix4d/cogito/status
 
 resources:
 - name: pull-request
-  type: pr
+  type: github-pr
   source:
     repository: MMahendravarman/concourse-ci-demo
     access_token: ((github-token))
+    disable_ci_skip: true    
+
+- name: pr-status
+  type: pr-status
+  source:
+    repository: MMahendravarman/concourse-ci-demo
+    access_token: ((github-token))
+    context: ci/concourse-pr-check
 
 jobs:
 - name: pr-check
@@ -25,7 +38,7 @@ jobs:
         type: registry-image
         source:
           repository: maven
-          tag: '3.8.3-openjdk-17-slim'
+          tag: '3.8.3-openjdk-17'
       inputs:
         - name: pull-request
       outputs:
@@ -43,8 +56,14 @@ jobs:
             chmod +x scripts/check_coverage.sh
             ./scripts/check_coverage.sh > ../coverage-output/coverage.txt
 
-  - put: pull-request
+  - put: pr-status
     params:
-      path: pull-request
-      context: ci/concourse-pr-check
+      state: "success"
       description_file: coverage-output/coverage.txt
+    on_success: true
+
+  - put: pr-status
+    params:
+      state: "failure"
+      description_file: coverage-output/coverage.txt
+    on_failure: true
