@@ -2,14 +2,14 @@ resource_types:
 - name: pr
   type: registry-image
   source:
-    repository: pix4d/cogito
+    repository: pix4d/cogito/pr
 
 resources:
 - name: pull-request
   type: pr
   source:
     repository: MMahendravarman/concourse-ci-demo
-    access_token: ((github-token))       
+    access_token: ((github-token))
 
 jobs:
 - name: pr-check
