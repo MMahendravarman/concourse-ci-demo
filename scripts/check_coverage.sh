@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+apt-get update && apt-get install -y bc
+
 echo "📊 Calculating JaCoCo code coverage..."
 
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
