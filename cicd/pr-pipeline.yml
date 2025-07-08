@@ -21,8 +21,7 @@ resources:
   type: pr-status
   source:
     repository: MMahendravarman/concourse-ci-demo
-    access_token: ((github-token))
-    context: ci/concourse-pr-check
+    access_token: ((github-token))    
 
 jobs:
 - name: pr-check
