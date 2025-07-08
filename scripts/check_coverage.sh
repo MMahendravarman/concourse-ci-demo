@@ -1,71 +1,39 @@
 #!/bin/bash
 set -e
 
-# === CONFIGURATION ===
+# Ensure bc is installed
+apt-get update && apt-get install -y bc
+
+echo "📊 Calculating JaCoCo code coverage..."
+
 THRESHOLD=${COVERAGE_THRESHOLD:-80}
+JACOCO_XML="target/site/jacoco/jacoco.xml"
 
-for util in jq bc curl git; do
-  if ! command -v $util &> /dev/null; then
-    echo "Installing $util..."
-    apt-get update && apt-get install -y $util
-  fi
-done
+if [ ! -f "$JACOCO_XML" ]; then
+  echo "❌ JaCoCo report not found at $JACOCO_XML"
+  exit 1
+fi
 
-echo "🔍 Reading PR metadata..."
-PR_NUMBER=$(cat .git/resource/pr)
-PR_TITLE=$(jq -r '.[] | select(.name=="title") | .value' .git/resource/metadata.json)
-PR_AUTHOR=$(jq -r '.[] | select(.name=="author") | .value' .git/resource/metadata.json)
-BASE_SHA=$(cat .git/resource/base_sha)
-HEAD_SHA=$(cat .git/resource/head_sha)
+COVERED=$(grep -A 1 '<counter type="INSTRUCTION"' "$JACOCO_XML" \
+           | grep -oP 'covered="\K\d+' | paste -sd+ - | bc)
 
-echo "📄 PR #$PR_NUMBER – $PR_TITLE by $PR_AUTHOR"
-echo "Base SHA: $BASE_SHA"
-echo "Head SHA: $HEAD_SHA"
-
-# === Calculate JaCoCo instruction coverage ===
-echo "📊 Calculating code coverage..."
-COVERED=$(grep -A 1 '<counter type="INSTRUCTION"' target/site/jacoco/jacoco.xml \
-           | grep -oP 'covered="\K\d+' \
-           | paste -sd+ - | bc)
-
-MISSED=$(grep -A 1 '<counter type="INSTRUCTION"' target/site/jacoco/jacoco.xml \
-           | grep -oP 'missed="\K\d+' \
-           | paste -sd+ - | bc)
+MISSED=$(grep -A 1 '<counter type="INSTRUCTION"' "$JACOCO_XML" \
+           | grep -oP 'missed="\K\d+' | paste -sd+ - | bc)
 
 TOTAL=$((COVERED + MISSED))
+
+if [ "$TOTAL" -eq 0 ]; then
+  echo "❌ No instructions found in JaCoCo report."
+  exit 1
+fi
+
 PERCENT=$((COVERED * 100 / TOTAL))
 
 echo "✅ Code coverage = $PERCENT% (threshold = $THRESHOLD%)"
+echo "Code coverage: $PERCENT% (threshold: $THRESHOLD%)" > ../coverage-output/coverage.txt
 
-# === Dynamically extract repo owner and name ===
-REPO_URL=$(git remote get-url origin)
-REPO_PATH=$(echo "$REPO_URL" | sed -E 's#.*github\.com[:/]+([^/]+)/([^/.]+)(\.git)?$#\1/\2#')
-REPO_OWNER=$(echo "$REPO_PATH" | cut -d'/' -f1)
-REPO_NAME=$(echo "$REPO_PATH" | cut -d'/' -f2)
-
-# === Post comment to PR ===
-COMMENT="🧪 **Code coverage:** $PERCENT% (Threshold: $THRESHOLD%)
-📄 PR: *$PR_TITLE* by @$PR_AUTHOR
-🔀 Commits: $BASE_SHA → $HEAD_SHA"
-
-API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/issues/$PR_NUMBER/comments"
-
-echo "💬 Posting comment to PR..."
-echo "url : $REPO_URL"
-echo "path : $REPO_PATH"
-echo "owner : $REPO_OWNER"
-echo "name : $REPO_NAME"
-
-
-curl -s -X POST "$API_URL" \
-  -H "Authorization: token ${GITHUB_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/vnd.github+json" \
-  -d "$(jq -nc --arg body "$COMMENT" '{body: $body}')"
-
-# === Fail build if below threshold ===
 if [ "$PERCENT" -lt "$THRESHOLD" ]; then
-  echo "❌ Code coverage ($PERCENT%) is below threshold ($THRESHOLD%). Failing build."
+  echo "❌ Code coverage ($PERCENT%) is below threshold ($THRESHOLD%)"
   exit 1
 else
   echo "✅ Code coverage check passed."

@@ -1,44 +1,52 @@
 resource_types:
-- name: github-pr
+- name: pr
   type: registry-image
   source:
-    repository: teliaoss/github-pr-resource
+    repository: pix4d/cogito
 
 resources:
 - name: pull-request
-  type: github-pr
+  type: pr
   source:
     repository: MMahendravarman/concourse-ci-demo
     access_token: ((github-token))
+    context: ci/concourse-pr-check   # GitHub status context name
     disable_ci_skip: true
 
 jobs:
 - name: pr-check
   plan:
-    - get: pull-request
-      trigger: true
-      version: every
-      
+  - get: pull-request
+    trigger: true
+    version: every
 
-    - task: build-and-check-coverage
-      input_mapping: { pull-request: pull-request }
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: maven
-            tag: '3.8.3-openjdk-17-slim'
-        inputs:
-          - name: pull-request
-        params:
-          GITHUB_TOKEN: ((github-token))
-        run:
-          path: bash
-          args:
-            - -exc
-            - |
-              cd pull-request
-              mvn clean verify             
-              chmod +x scripts/check_coverage.sh
-              ./scripts/check_coverage.sh
+  - task: build-and-check-coverage
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: maven
+          tag: '3.8.3-openjdk-17'
+      inputs:
+        - name: pull-request
+      outputs:
+        - name: coverage-output
+      params:
+        COVERAGE_THRESHOLD: 80
+      run:
+        path: bash
+        args:
+          - -exc
+          - |
+            apt-get update && apt-get install -y jq bc
+            cd pull-request
+            mvn clean verify
+            chmod +x scripts/check_coverage.sh
+            ./scripts/check_coverage.sh > ../coverage-output/coverage.txt
+
+  - put: pull-request
+    params:
+      path: pull-request
+      context: ci/concourse-pr-check
+      description_file: coverage-output/coverage.txt
