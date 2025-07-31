@@ -1,0 +1,89 @@
+resource_types:
+  - name: github-pr
+    type: docker-image
+    source:
+      repository: teliaoss/github-pr-resource
+
+  - name: pr-status
+    type: registry-image
+    source:
+      repository: pix4d/cogito
+
+resources:
+  - name: pull-request
+    type: github-pr
+    source:
+      repository: MMahendravarman/concourse-ci-demo
+      access_token: ((github-token))
+      disable_ci_skip: true
+
+  - name: pr-status
+    type: pr-status
+    source:
+      repo: concourse-ci-demo
+      owner: MMahendravarman
+      access_token: ((github-token))
+
+jobs:
+  - name: pr-check
+    plan:
+      - get: pull-request
+        trigger: true
+        version: every
+
+      - do:
+          - task: build-and-check-coverage
+            config:
+              platform: linux
+              image_resource:
+                type: registry-image
+                source:
+                  repository: maven
+                  tag: '3.8.3-openjdk-17-slim'
+              inputs:
+                - name: pull-request
+              outputs:
+                - name: coverage-output
+              params:
+                COVERAGE_THRESHOLD: 80
+              run:
+                path: bash
+                args:
+                  - -exc
+                  - |
+                    apt-get update && apt-get install -y jq bc
+
+                    cd pull-request
+                    mvn clean verify
+
+                    echo "Calculating JaCoCo code coverage..."
+                    THRESHOLD=${COVERAGE_THRESHOLD:-80}
+
+                    COVERED=$(grep -A 1 '<counter type="INSTRUCTION"' target/site/jacoco/jacoco.xml \
+                               | grep -oP 'covered="\K\d+' | paste -sd+ - | bc)
+
+                    MISSED=$(grep -A 1 '<counter type="INSTRUCTION"' target/site/jacoco/jacoco.xml \
+                               | grep -oP 'missed="\K\d+' | paste -sd+ - | bc)
+
+                    TOTAL=$((COVERED + MISSED))
+                    PERCENT=$((COVERED * 100 / TOTAL))
+
+                    echo "✅ Code coverage = $PERCENT% (threshold = $THRESHOLD%)"
+
+                    mkdir -p ../coverage-output
+                    echo "$PERCENT" > ../coverage-output/coverage.txt
+
+                    if [ "$PERCENT" -lt "$THRESHOLD" ]; then
+                      echo "❌ Coverage below threshold"
+                      exit 1
+                    else
+                      echo "✅ Coverage OK"
+                    fi
+
+          - load_var: coverage
+            file: coverage-output/coverage.txt
+
+          - put: pr-status
+            inputs: [pull-request]
+            params:
+              state: failure  # optionally update this dynamically later
